@@ -57,7 +57,7 @@ jobs:
 
       - name: Upload Backend Artifact to JFrog
         run: |
-          jfrog rt u "backend/motivator-backend.tar.gz" motivator-artifact/
+          jfrog rt u "backend/motivator-backend.tar.gz" Motivatorapp1/
 
   # Frontend CI/CD Job
   frontend:
@@ -94,5 +94,5 @@ jobs:
 
       - name: Deploy Frontend to JFrog
         run: |
-          jfrog rt u "frontend/build/*" motivator-artifact/
+          jfrog rt u "frontend/build/*" Motivatorapp1/
 
