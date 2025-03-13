@@ -1,5 +1,4 @@
 # MotivatorApp
-# motivator-app
 NodeJs app
 Project:Motivator App
 
