@@ -3,10 +3,10 @@ name: Full Stack CI/CD Pipeline
 on:
   push:
     branches:
-      - master
+      - main
   pull_request:
     branches:
-      - master
+      - main
 
 jobs:
   # Backend CI/CD Job
