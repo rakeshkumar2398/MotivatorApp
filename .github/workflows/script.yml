@@ -1,0 +1,65 @@
+name: CI/CD Pipeline for Motivator Backend
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - master
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
+
+      - name: Install dependencies
+        run: |
+          cd backend
+          npm install
+
+      - name: Run Linting
+        run: |
+          cd backend
+          npx eslint . --config eslint.config.mjs --ext .js,.jsx
+
+      - name: Run Code Quality Tests
+        run: |
+          cd backend
+          npm test
+
+  deploy:
+    needs: build-and-test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Package Backend
+        run: |
+          tar -cvf motivator-backend.tar.gz .
+
+      - name: Setup JFrog CLI
+        uses: jfrog/setup-jfrog-cli@v3
+        with:
+          version: latest
+      - name: Configure JFrog CLI with API Key
+        run: |
+          jfrog config add my-artifactory \
+          --artifactory-url=${{ secrets.JFROG_URL }} \
+          --user=${{ secrets.JFROG_USER }} \
+          --password=${{ secrets.JFROG_PASSWORD }} \
+          --interactive=false
+      - name: Push Backend to JFrog Artifactory
+        run: |
+          jfrog rt u "motivator-backend.tar.gz" motivator-artifact/motivator-backend.tar.gz
+
