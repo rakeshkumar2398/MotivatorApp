@@ -1,17 +1,17 @@
-name: CI/CD Pipeline for Motivator Backend
+name: Full Stack CI/CD Pipeline
 
 on:
   push:
     branches:
-      - main
+      - master
   pull_request:
     branches:
-      - main
+      - master
 
 jobs:
-  build-and-test:
+  # Backend CI/CD Job
+  backend:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
@@ -21,45 +21,78 @@ jobs:
         with:
           node-version: 18
 
-      - name: Install dependencies
+      - name: Install Backend Dependencies
         run: |
           cd backend
           npm install
 
-      - name: Run Linting
+      - name: Run Linting (Backend)
         run: |
           cd backend
-          npx eslint . --config eslint.config.mjs --ext .js,.jsx
+          npx eslint . --ext .js,.jsx
 
-      - name: Run Code Quality Tests
+      - name: Run Backend Tests
         run: |
           cd backend
           npm test
 
-  deploy:
-    needs: build-and-test
-    runs-on: ubuntu-latest
+      - name: Package Backend
+        run: |
+          cd backend
+          tar -cvf motivator-backend.tar.gz .
 
+      - name: Install JFrog CLI
+        run: |
+          curl -fL https://install-cli.jfrog.io | sh
+          sudo mv jf /usr/local/bin/jfrog
+          sudo chmod +x /usr/local/bin/jfrog
+
+      - name: Configure JFrog CLI
+        run: |
+          jfrog config add my-artifactory \
+            --artifactory-url=${{ secrets.JFROG_URL }} \
+            --user=${{ secrets.JFROG_USER }} \
+            --password=${{ secrets.JFROG_API_KEY }} \
+            --interactive=false
+
+      - name: Upload Backend Artifact to JFrog
+        run: |
+          jfrog rt u "backend/motivator-backend.tar.gz" motivator-artifact/
+
+  # Frontend CI/CD Job
+  frontend:
+    runs-on: ubuntu-latest
+    needs: backend  # Ensures backend runs first
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      - name: Package Backend
-        run: |
-          tar -cvf motivator-backend.tar.gz .
-
-      - name: Setup JFrog CLI
-        uses: jfrog/setup-jfrog-cli@v3
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
         with:
-          version: latest
-      - name: Configure JFrog CLI with API Key
+          node-version: 18
+
+      - name: Install Frontend Dependencies
         run: |
-          jfrog config add my-artifactory \
-          --artifactory-url=${{ secrets.JFROG_URL }} \
-          --user=${{ secrets.JFROG_USER }} \
-          --password=${{ secrets.JFROG_PASSWORD }} \
-          --interactive=false
-      - name: Push Backend to JFrog Artifactory
+          cd frontend
+          npm install
+
+      - name: Run Linting (Frontend)
         run: |
-          jfrog rt u "motivator-backend.tar.gz" motivator-artifact/motivator-backend.tar.gz
+          cd frontend
+          npx eslint . --ext .js,.jsx
+
+      - name: Run Frontend Tests
+        run: |
+          cd frontend
+          npm test
+
+      - name: Build Frontend
+        run: |
+          cd frontend
+          npm run build
+
+      - name: Deploy Frontend to JFrog
+        run: |
+          jfrog rt u "frontend/build/*" motivator-artifact/
 
